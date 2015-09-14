@@ -5,8 +5,11 @@ Dropzone is a jQuery plugin for a simple drag and drop file uploader. It allows 
 
 ## Requirements
 
-* lalal
-*čsas
+* [jQuery](http://jquery.com) (>= 1.11.0)
+* [Bootstrap](http://getbootstrap.com/) (>= 3.5)
+
+Demo
+==========
 
 
 
