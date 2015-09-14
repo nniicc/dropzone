@@ -55,11 +55,11 @@ Callbacks
 
 TODO
 ==========
-  ### Add support for allowed file types
+#### Add support for allowed file types
 
 Changes
 ==========
-  ### first version (2015-09-14)
+#### first version (2015-09-14)
 
 
 Copyright © Marko Kuhar
