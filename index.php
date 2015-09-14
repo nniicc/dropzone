@@ -14,21 +14,9 @@
         <div class="panel panel-info">
             <div class="panel-heading">File Upload Form</div>
             <div class="panel-body">
-                <form class="navbar-form" role="search" action="upload.php" method="POST" enctype="multipart/form-data">
-                    <div class="input-group">
-                        <span class="input-group-btn">
-                            <span class="btn btn-primary btn-file">
-                                Browse&hellip; <input type="file" multiple="multiple" name="upload_files[]" class="form-control">
-                            </span>
-                        </span>
-                        <input type="text" class="form-control file-text" readonly>
-                    </div>
-                    <button type="submit" name="submit" class="btn btn-default">Submit</button>
-                </form>
                 <div class="dropzone"></div>
             </div>
         </div>
-        <div class="lal"></div>
     </div>
 
     <!--<script src="https://code.jquery.com/jquery-2.1.4.js"></script>-->
