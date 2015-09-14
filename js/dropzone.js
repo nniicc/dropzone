@@ -23,6 +23,7 @@
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  null,                           //Access to the files that are droped
             maxFileSize:            '100MB',                        //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
+            allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
 
             //functions
@@ -136,6 +137,10 @@
                         for (i = 0; i < files.length; i++) {
                             formData = new FormData();
                             xhr = new XMLHttpRequest();
+                            if(!checkFileType(files[i])){
+                                addWrongFileField(files[i], i);
+                                continue;
+                            }
                             if(!checkFileSize(files[i])) {
                                 addFileToBigField(files[i], i);
                                 continue;
@@ -174,6 +179,7 @@
                 readystatechange: function(){
                     if(this.readyState == 4 && this.status == 200){
                         changeXhrDoneStatus(i);
+                        $(".progress.progress-"+i).children().removeClass('active');
                     }
                 }
             });
@@ -190,9 +196,6 @@
                         clearInterval(interval);
                         xhrDone = {};
                         if(typeof options.uploadDone == "function") options.uploadDone($me);
-                        else{
-                            $(".progress").children().removeClass('active');
-                        }
                     }
                 }
             }, 500);
@@ -221,6 +224,30 @@
                 width: 300,
                 margin: '20px 0 0 0'
             }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big: '+fileName+' ('+formatBytes(file.size)+')</div>');
+        }
+
+        function addWrongFileField(file, i){
+            $(options.progressContainer)
+                .append('<div class="progress error-progress-'+i+'"></div>')
+                .css('margin', options.margin);
+            var fileName = file.name.trunc(15);
+            var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
+            $(".error-progress-"+i).css({
+                width: 300,
+                margin: '20px 0 0 0'
+            }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">'+fileName+'('+extension+') is not allowed</div>');
+        }
+
+        function checkFileType(file){
+            if (!file.type && file.size%4096 === 0) return false;
+            if(options.allowedFileTypes == '*') return true;
+            var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
+
+            var allowedTypes = options.allowedFileTypes.split(",");
+
+            if($.inArray(extension, allowedTypes) != -1) return true;
+
+            return false;
         }
 
         function checkFileSize(file){

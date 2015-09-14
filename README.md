@@ -44,6 +44,7 @@ Options
 - `dropzoneWraper` - wrap the dropzone div with custom class
 - `files` - access to the files that are droped
 - `maxFileSize` - max file size ['bytes', 'KB', 'MB', 'GB', 'TB'], 100MB default
+- `allowedFileTypes` - allowed files to be uploaded seperated by ',' jpg,png,gif
 - `clickToUpload` - click on dropzone to select files old way
 
 Callbacks
@@ -52,10 +53,6 @@ Callbacks
 - `progress` - fires when the files are being uploaded and returns the prcent and the index of the file
 - `uploadDone` - fires when all files have been uploaded
 
-
-TODO
-==========
-#### Add support for allowed file types
 
 Changes
 ==========
