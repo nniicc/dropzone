@@ -10,16 +10,17 @@
             height:                 300,                            //height of the div
             url:                    '',                             //url for the ajax to post
             filesName:              'files',                        //name for the form submit
+            margin:                 0,                              //margin added if needed
             border:                 '2px dashed #ccc',              //border property
+            background:             '',
             textColor:              '#ccc',                         //text color
             textAlign:              'center',                       //css style for text-align
             lineHeight:             300,                            //vertical text align
             text:                   'Drop files here to upload',    //text inside the div
             uploadMode:             'single',                       //upload all files at once or upload single files, options: all or single
             progressContainer:      '',                             //progress selector if null one will be created
-            margin:                 0,                              //margin added if needed
 
-            dropzoneWraper:         'nniicc-dropzoneParent',
+            dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  null,                           //Access to the files that are droped
             maxFileSize:            '100MB',                        //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             clickToUpload:          true,                           //click on dropzone to select files old way
@@ -39,6 +40,7 @@
                 width: options.width,
                 height: options.height,
                 border: options.border,
+                background: options.background,
                 color: options.textColor,
                 'text-align': options.textAlign,
                 lineHeight: typeof options.lineHeight == "number" ? options.lineHeight + "px" : options.lineHeight
@@ -89,13 +91,16 @@
                         upload(e.originalEvent.dataTransfer.files);
                 },
                 click: function(e){
-                    if(options.clickToUpload)
-                        $("." + options.dropzoneWraper).find('input').trigger('click');
+                    if(options.clickToUpload){
+                        if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
+                        else
+                            $("." + options.dropzoneWraper).find('input').trigger('click');
+                    }
                 }
             });
 
 
-            if(typeof options.load == "function") options.load();
+            if(typeof options.load == "function") options.load($me);
 
             function dragLeave(me){
                 var borderColor = options.textColor;
