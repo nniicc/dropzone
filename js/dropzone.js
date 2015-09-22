@@ -8,6 +8,7 @@
         var options = $.extend({
             width:                  300,                            //width of the div
             height:                 300,                            //height of the div
+            progressBarWidth:       300,                            //width of the progress bars
             url:                    '',                             //url for the ajax to post
             filesName:              'files',                        //name for the form submit
             margin:                 0,                              //margin added if needed
@@ -22,7 +23,7 @@
 
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  null,                           //Access to the files that are droped
-            maxFileSize:            '100MB',                        //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
+            maxFileSize:            '500MB',                        //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
 
@@ -45,6 +46,12 @@
                 color: options.textColor,
                 'text-align': options.textAlign,
                 lineHeight: typeof options.lineHeight == "number" ? options.lineHeight + "px" : options.lineHeight
+            });
+
+            $me.hover(function() {
+                $(this).css("cursor", "pointer");
+            }, function() {
+                $(this).css("cursor", "default");
             });
 
             $me.html(options.text);
@@ -116,7 +123,7 @@
             function upload(files){
                 if(files){
                     options.files = files;
-                    $(options.progressContainer).find('.progress').remove();
+                    $(options.progressContainer).find('.extra-progress-wrapper').remove();
                     var i, formData, xhr;
                     if(options.uploadMode == 'all'){
                         formData = new FormData();
@@ -138,11 +145,11 @@
                             formData = new FormData();
                             xhr = new XMLHttpRequest();
                             if(!checkFileType(files[i])){
-                                addWrongFileField(files[i], i);
+                                addWrongFileField(i);
                                 continue;
                             }
                             if(!checkFileSize(files[i])) {
-                                addFileToBigField(files[i], i);
+                                addFileToBigField(i);
                                 continue;
                             }
                             formData.append(options.filesName + '[]', files[i]);
@@ -167,6 +174,7 @@
                         var percent = e.originalEvent.loaded / e.originalEvent.total * 100;
                         if(typeof options.progress == "function") options.progress(percent, i);
                         else{
+                            //var fileName = file.name.trunc(15);
                             $(".progress-"+i).children().css("width", percent+"%").html(percent.toFixed(0)+"%");
                         }
                     }
@@ -208,34 +216,40 @@
         function addProgressBar(i){
             $(options.progressContainer)
                 .append('<div class="progress progress-'+i+'"></div>')
-                .css('margin', options.margin);
+                .css({'margin': options.margin});
             $(".progress-"+i).css({
-                width: 300,
-                margin: '20px 0 0 0'
+                width: options.progressBarWidth,
+                margin: '20px 0 0 0',
             }).append('<div class="progress-bar progress-bar-info progress-bar-striped active"></div>').hide();
+            $(".progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
+            $(".progress-" + i).parent().append('<span>'+options.files[i].name+'</span>');
         }
 
-        function addFileToBigField(file, i){
+        function addFileToBigField(i){
             $(options.progressContainer)
                 .append('<div class="progress error-progress-'+i+'"></div>')
                 .css('margin', options.margin);
+            var file = options.files[i];
             var fileName = file.name.trunc(25);
             $(".error-progress-"+i).css({
-                width: 300,
+                width: options.progressBarWidth,
                 margin: '20px 0 0 0'
             }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big: '+fileName+' ('+formatBytes(file.size)+')</div>');
+            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
         }
 
-        function addWrongFileField(file, i){
+        function addWrongFileField(i){
             $(options.progressContainer)
                 .append('<div class="progress error-progress-'+i+'"></div>')
                 .css('margin', options.margin);
+            var file = options.files[i];
             var fileName = file.name.trunc(15);
             var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
             $(".error-progress-"+i).css({
-                width: 300,
+                width: options.progressBarWidth,
                 margin: '20px 0 0 0'
             }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">'+fileName+'('+extension+') is not allowed</div>');
+            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
         }
 
         function checkFileType(file){
@@ -243,7 +257,7 @@
             if(options.allowedFileTypes == '*') return true;
             var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
 
-            var allowedTypes = options.allowedFileTypes.split(",");
+            var allowedTypes = options.allowedFileTypes.replace(' ', '').split(",");
 
             if($.inArray(extension, allowedTypes) != -1) return true;
 
