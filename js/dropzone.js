@@ -26,7 +26,8 @@
             maxFileSize:            '10TB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
-            showTimer:              true,                           //show time that has elapsed from the start of the upload
+            showTimer:              true,                           //show time that has elapsed from the start of the upload,
+            removeComplete:         true,                           //delete complete progress bars when adding new files
 
             //functions
             load:                   null,                           //callback when the div is loaded
@@ -139,10 +140,12 @@
             function upload(files){
                 if(files){
                     options.files = files;
-                    var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
-                    $removeEls.each(function(index, el) {
-                        el.remove();
-                    });
+                    if(options.removeComplete){
+                        var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                        $removeEls.each(function(index, el) {
+                            el.remove();
+                        });
+                    }
                     var i, formData, xhr;
                     if(options.uploadMode == 'all'){
                         timerStartDate[0] = $.now();
@@ -193,15 +196,6 @@
             }
         }
 
-        function getIndexOfFile(needle){
-            var ret = -1;
-            $(options.files).each(function(index, el) {
-                console.log(index, el.name, needle, el.name == needle);
-                if(el.name == needle) ret = index;
-            });
-            return ret;
-        }
-
         function startTimer(i){
             timers[i] = window.setInterval(function(){
                 var $el = $(".upload-timer-" + i);
@@ -219,6 +213,7 @@
 
             }, 10);
         }
+
         function pad (str, max) {
             str = str.toString();
             return str.length < max ? pad("0" + str, max) : str;
