@@ -23,9 +23,10 @@
 
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  null,                           //Access to the files that are droped
-            maxFileSize:            '500MB',                        //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
+            maxFileSize:            '10TB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
+            showTimer:              true,                           //show time that has elapsed from the start of the upload
 
             //functions
             load:                   null,                           //callback when the div is loaded
@@ -33,11 +34,25 @@
             uploadDone:             null,                           //callback for the file upload finished
         }, settings);
 
-        init();
-
         var xhrDone = {};
+        var timers = {};
+        var timerStartDate = new Date();
+
+        if(typeof $.ui == "undefined"){
+            jQuery.getScript('https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js', function(){
+                $('<link/>', {
+                   rel: 'stylesheet',
+                   type: 'text/css',
+                   href: 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css'
+                }).appendTo('head');
+                init();
+            });
+        }else{
+            init();
+        }
 
         function init(){
+
             $me.css({
                 width: options.width,
                 height: options.height,
@@ -164,7 +179,26 @@
                         }
                     }
                 }
+                showTooltip();
             }
+        }
+
+        function startTimer(i){
+            timers[i] = window.setInterval(function(){
+                var $el = $(".upload-timer-" + i);
+
+                var t = $el.attr("val");
+
+                var sec = t / 100;
+                var min = 0;
+                if(sec >= 60){
+                    min = (sec % 60).toFixed(0);
+                }
+
+                $el.text(min + ":" +sec.toFixed(2));
+                $el.attr("val", ++t);
+
+            }, 10);
         }
 
         function bindXHR(xhr, i){
@@ -178,6 +212,9 @@
                             $(".progress-"+i).children().css("width", percent+"%").html(percent.toFixed(0)+"%");
                         }
                     }
+                },
+                loadstart: function(e, a, b, c){
+                    startTimer(i);
                 }
             });
 
@@ -211,6 +248,7 @@
 
         function changeXhrDoneStatus(i){
             xhrDone[i] = true;
+            clearInterval(timers[i]);
         }
 
         function addProgressBar(i){
@@ -222,7 +260,10 @@
                 margin: '20px 0 0 0',
             }).append('<div class="progress-bar progress-bar-info progress-bar-striped active"></div>').hide();
             $(".progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
-            $(".progress-" + i).parent().append('<span>'+options.files[i].name+'</span>');
+            $(".progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+options.files[i].name.trunc(20)+'</span>').css("width", options.progressBarWidth);
+            if(options.showTimer){
+                $(".progress-" + i).parent().append('<span style="float:right" val="0" class="upload-timer-'+i+'">0</span>');
+            }
         }
 
         function addFileToBigField(i){
@@ -234,8 +275,9 @@
             $(".error-progress-"+i).css({
                 width: options.progressBarWidth,
                 margin: '20px 0 0 0'
-            }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big: '+fileName+' ('+formatBytes(file.size)+')</div>');
-            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
+            }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big ('+formatBytes(file.size)+')</div>');
+            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
+            $(".error-progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
         }
 
         function addWrongFileField(i){
@@ -243,13 +285,22 @@
                 .append('<div class="progress error-progress-'+i+'"></div>')
                 .css('margin', options.margin);
             var file = options.files[i];
-            var fileName = file.name.trunc(15);
+            var fileName = file.name.trunc(25);
             var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
             $(".error-progress-"+i).css({
                 width: options.progressBarWidth,
                 margin: '20px 0 0 0'
-            }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">'+fileName+'('+extension+') is not allowed</div>');
-            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
+            }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File type ('+extension+') is not allowed</div>');
+            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
+            $(".error-progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
+        }
+
+        function showTooltip(){
+             $("span").tooltip({
+                open: function(event, ui){
+                    ui.tooltip.css("max-width", '100%');
+                }
+            });
         }
 
         function checkFileType(file){
@@ -271,6 +322,7 @@
             var sizeValue = options.maxFileSize.match(/\d+/)[0];
             var sizeIndex = $.inArray(sizeType, sizes);
 
+
             if(sizeIndex != -1){
                 var fileSize = formatBytes(file.size);
                 var fileSizeType = fileSize.match(/[a-zA-Z]+/g)[0];
@@ -283,7 +335,7 @@
                 }else{
                     var fileSizeIndex = $.inArray(fileSizeType, sizes);
                     if(fileSizeIndex > -1){
-                        if(parseInt(fileSizeValue) < (parseInt(sizeValue) * ( sizeIndex * 1000))){
+                        if((parseInt(fileSizeValue) * (Math.pow(1024, fileSizeIndex))) < (parseInt(sizeValue) * (Math.pow(1024, sizeIndex)))){
                             return true;
                         }
                     }
