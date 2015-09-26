@@ -23,7 +23,7 @@
 
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  [],                             //Access to the files that are droped
-            maxFileSize:            '10TB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
+            maxFileSize:            '10MB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
             showTimer:              true,                           //show time that has elapsed from the start of the upload,
@@ -173,10 +173,12 @@
 
                             if(!checkFileType(files[i])){
                                 addWrongFileField(i, uploadIndex);
+                                uploadIndex++;
                                 continue;
                             }
                             if(!checkFileSize(files[i])) {
                                 addFileToBigField(i, uploadIndex);
+                                uploadIndex++;
                                 continue;
                             }
                             formData.append(options.filesName + '[]', files[i]);
@@ -285,6 +287,7 @@
         }
 
         function addFileToBigField(i, index){
+            console.log(index);
             $(options.progressContainer)
                 .append('<div class="progress error-progress-'+index+'"></div>')
                 .css('margin', options.margin);
