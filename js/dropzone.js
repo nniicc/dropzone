@@ -22,7 +22,7 @@
             progressContainer:      '',                             //progress selector if null one will be created
 
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
-            files:                  null,                           //Access to the files that are droped
+            files:                  [],                             //Access to the files that are droped
             maxFileSize:            '10TB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
@@ -36,7 +36,8 @@
 
         var xhrDone = {};
         var timers = {};
-        var timerStartDate = new Date();
+        var timerStartDate = {};
+        var uploadIndex = 0;
 
         if(typeof $.ui == "undefined"){
             jQuery.getScript('https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js', function(){
@@ -138,9 +139,14 @@
             function upload(files){
                 if(files){
                     options.files = files;
-                    $(options.progressContainer).find('.extra-progress-wrapper').remove();
+                    var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                    $removeEls.each(function(index, el) {
+                        el.remove();
+                    });
                     var i, formData, xhr;
                     if(options.uploadMode == 'all'){
+                        timerStartDate[0] = $.now();
+
                         formData = new FormData();
                         xhr = new XMLHttpRequest();
 
@@ -157,25 +163,29 @@
                         $(".progress").show();
                     }else if(options.uploadMode == 'single'){
                         for (i = 0; i < files.length; i++) {
+                            timerStartDate[uploadIndex] = $.now();
+
                             formData = new FormData();
                             xhr = new XMLHttpRequest();
+
                             if(!checkFileType(files[i])){
-                                addWrongFileField(i);
+                                addWrongFileField(i, uploadIndex);
                                 continue;
                             }
                             if(!checkFileSize(files[i])) {
-                                addFileToBigField(i);
+                                addFileToBigField(i, uploadIndex);
                                 continue;
                             }
                             formData.append(options.filesName + '[]', files[i]);
 
-                            addProgressBar(i);
-                            bindXHR(xhr, i);
+                            addProgressBar(i, uploadIndex);
+                            bindXHR(xhr, i, uploadIndex);
 
                             xhr.open('post', options.url);
                             xhr.setRequestHeader('Cache-Control', 'no-cache');
                             xhr.send(formData);
                             $(".progress").show();
+                            uploadIndex++;
                         }
                     }
                 }
@@ -183,48 +193,61 @@
             }
         }
 
+        function getIndexOfFile(needle){
+            var ret = -1;
+            $(options.files).each(function(index, el) {
+                console.log(index, el.name, needle, el.name == needle);
+                if(el.name == needle) ret = index;
+            });
+            return ret;
+        }
+
         function startTimer(i){
             timers[i] = window.setInterval(function(){
                 var $el = $(".upload-timer-" + i);
 
-                var t = $el.attr("val");
+                var diff = $.now() - timerStartDate[i];
 
-                var sec = t / 100;
+                var sec = diff / 1000;
                 var min = 0;
                 if(sec >= 60){
-                    min = (sec % 60).toFixed(0);
+                    min = Math.round(sec / 60);
+                    sec = sec % 60;
                 }
 
-                $el.text(min + ":" +sec.toFixed(2));
-                $el.attr("val", ++t);
+                $el.text(min + ":" + pad(sec.toFixed(2), 5));
 
             }, 10);
         }
+        function pad (str, max) {
+            str = str.toString();
+            return str.length < max ? pad("0" + str, max) : str;
+        }
 
-        function bindXHR(xhr, i){
+        function bindXHR(xhr, i, index){
             $(xhr.upload).bind({
                 progress: function(e){
                     if(e.originalEvent.lengthComputable){
                         var percent = e.originalEvent.loaded / e.originalEvent.total * 100;
-                        if(typeof options.progress == "function") options.progress(percent, i);
+                        if(typeof options.progress == "function") options.progress(percent, index);
                         else{
                             //var fileName = file.name.trunc(15);
-                            $(".progress-"+i).children().css("width", percent+"%").html(percent.toFixed(0)+"%");
+                            $(".progress-"+index).children().css("width", percent+"%").html(percent.toFixed(0)+"%");
                         }
                     }
                 },
                 loadstart: function(e, a, b, c){
-                    startTimer(i);
+                    startTimer(index);
                 }
             });
 
-            xhrDone[i] = false;
+            xhrDone[index] = false;
 
             $(xhr).bind({
                 readystatechange: function(){
                     if(this.readyState == 4 && this.status == 200){
-                        changeXhrDoneStatus(i);
-                        $(".progress.progress-"+i).children().removeClass('active');
+                        changeXhrDoneStatus(index);
+                        $(".progress.progress-"+index).children().removeClass('active');
                     }
                 }
             });
@@ -233,8 +256,8 @@
                 if(Object.keys(xhrDone).length > 0){
                     var allOk = {};
 
-                    for(var index in xhrDone){
-                        if(xhrDone[index] === true) allOk[index] = true;
+                    for(var indexT in xhrDone){
+                        if(xhrDone[indexT] === true) allOk[indexT] = true;
                     }
 
                     if(Object.keys(xhrDone).length == Object.keys(allOk).length){
@@ -251,48 +274,48 @@
             clearInterval(timers[i]);
         }
 
-        function addProgressBar(i){
+        function addProgressBar(i, index){
             $(options.progressContainer)
-                .append('<div class="progress progress-'+i+'"></div>')
+                .append('<div class="progress progress-'+index+'"></div>')
                 .css({'margin': options.margin});
-            $(".progress-"+i).css({
+            $(".progress-"+index).css({
                 width: options.progressBarWidth,
                 margin: '20px 0 0 0',
             }).append('<div class="progress-bar progress-bar-info progress-bar-striped active"></div>').hide();
-            $(".progress-" + i).wrap('<div class="extra-progress-wrapper"></div>');
-            $(".progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+options.files[i].name.trunc(20)+'</span>').css("width", options.progressBarWidth);
+            $(".progress-" + index).wrap('<div class="extra-progress-wrapper"></div>');
+            $(".progress-" + index).parent().append('<span title="'+options.files[i].name+'">'+options.files[i].name.trunc(20)+'</span>').css("width", options.progressBarWidth);
             if(options.showTimer){
-                $(".progress-" + i).parent().append('<span style="float:right" val="0" class="upload-timer-'+i+'">0</span>');
+                $(".progress-" + index).parent().append('<span style="float:right" class="upload-timer-'+index+'">0</span>');
             }
         }
 
-        function addFileToBigField(i){
+        function addFileToBigField(i, index){
             $(options.progressContainer)
-                .append('<div class="progress error-progress-'+i+'"></div>')
+                .append('<div class="progress error-progress-'+index+'"></div>')
                 .css('margin', options.margin);
             var file = options.files[i];
             var fileName = file.name.trunc(25);
-            $(".error-progress-"+i).css({
+            $(".error-progress-"+index).css({
                 width: options.progressBarWidth,
                 margin: '20px 0 0 0'
             }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big ('+formatBytes(file.size)+')</div>');
-            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
-            $(".error-progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
+            $(".error-progress-" + index).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
+            $(".error-progress-" + index).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
         }
 
-        function addWrongFileField(i){
+        function addWrongFileField(i, index){
             $(options.progressContainer)
-                .append('<div class="progress error-progress-'+i+'"></div>')
+                .append('<div class="progress error-progress-'+index+'"></div>')
                 .css('margin', options.margin);
             var file = options.files[i];
             var fileName = file.name.trunc(25);
             var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
-            $(".error-progress-"+i).css({
+            $(".error-progress-"+index).css({
                 width: options.progressBarWidth,
                 margin: '20px 0 0 0'
             }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File type ('+extension+') is not allowed</div>');
-            $(".error-progress-" + i).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
-            $(".error-progress-" + i).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
+            $(".error-progress-" + index).wrap('<div class="extra-progress-wrapper"></div>').css("width", options.progressBarWidth);
+            $(".error-progress-" + index).parent().append('<span title="'+options.files[i].name+'">'+fileName+'</span>');
         }
 
         function showTooltip(){
