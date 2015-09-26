@@ -287,7 +287,6 @@
         }
 
         function addFileToBigField(i, index){
-            console.log(index);
             $(options.progressContainer)
                 .append('<div class="progress error-progress-'+index+'"></div>')
                 .css('margin', options.margin);
