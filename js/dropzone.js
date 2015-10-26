@@ -16,7 +16,6 @@
             background:             '',
             textColor:              '#ccc',                         //text color
             textAlign:              'center',                       //css style for text-align
-            lineHeight:             300,                            //vertical text align
             text:                   'Drop files here to upload',    //text inside the div
             uploadMode:             'single',                       //upload all files at once or upload single files, options: all or single
             progressContainer:      '',                             //progress selector if null one will be created
@@ -28,11 +27,14 @@
             clickToUpload:          true,                           //click on dropzone to select files old way
             showTimer:              true,                           //show time that has elapsed from the start of the upload,
             removeComplete:         true,                           //delete complete progress bars when adding new files
+            preview:                false,                          //if enabled it will load the pictured directly to the html
 
             //functions
             load:                   null,                           //callback when the div is loaded
             progress:               null,                           //callback for the files procent
             uploadDone:             null,                           //callback for the file upload finished
+            error:                  null,                           //callback for any error
+            previewDone:            null,                           //callback for the preview is rendered
         }, settings);
 
         var xhrDone = {};
@@ -54,7 +56,6 @@
         }
 
         function init(){
-
             $me.css({
                 width: options.width,
                 height: options.height,
@@ -62,7 +63,8 @@
                 background: options.background,
                 color: options.textColor,
                 'text-align': options.textAlign,
-                lineHeight: typeof options.lineHeight == "number" ? options.lineHeight + "px" : options.lineHeight
+                'box-align': 'center',
+                'box-pack': 'center'
             });
 
             $me.hover(function() {
@@ -79,18 +81,41 @@
                 options.progressContainer = "."+options.dropzoneWraper;
             }
 
+            if($me.attr('src') !== ''){
+                var src = $me.attr('src');
+                $me.attr('src', '');
+                var clone = $me.clone();
+                $me.css({
+                    'z-index': 200,
+                    position: 'absolute'
+                }).html('').parent().css('position', 'relative');
+                clone.appendTo($me.parent());
+                clone.replaceWith('<img id="previewImg" src="'+src+'" />');
+                $("#previewImg").css({
+                    width: options.width,
+                    height: options.height,
+                    border: options.border,
+                    background: options.background,
+                    color: options.textColor,
+                    'text-align': options.textAlign,
+                    'box-align': 'center',
+                    'box-pack': 'center'
+                });
+            }
+
             if(options.clickToUpload){
                 $("." + options.dropzoneWraper).append('<form></form>');
-                $("."+options.dropzoneWraper).find('form').append('<input type="file" multiple="multiple" name="'+options.filesName+'[]"/>').hide().bind('change', function(event) {
+                $("."+options.dropzoneWraper).find('form')
+                .append('<input type="file" name="'+options.filesName+'"/>').hide().
+                bind('change', function(event) {
                     $(this).trigger('submit');
                 }).on('submit', function(event){
                     event.preventDefault();
                     upload(event.target[0].files);
                     var input = $(this).find('input');
 
-                    input.wrap('<form>').closest('form').get(0).reset();
-                    input.unwrap();
-
+                    //input.wrap('<form>').closest('form').get(0).reset();
+                    input.unwrap().hide();
                 });
             }
 
@@ -118,8 +143,24 @@
                 click: function(e){
                     if(options.clickToUpload){
                         if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
-                        else
-                            $("." + options.dropzoneWraper).find('input').trigger('click');
+                        else{
+                            var el = $("." + options.dropzoneWraper).find('input');
+                            if(el.parent().prop('tagName') !== 'FORM'){
+                                var form = $("<form></form>");
+                                form.bind('change', function(){
+                                    $(this).trigger('submit');
+                                }).on('submit', function(event){
+                                    event.preventDefault();
+                                    upload(event.target[0].files);
+                                    var input = $(this).find('input');
+
+                                    //input.wrap('<form>').closest('form').get(0).reset();
+                                    input.unwrap().hide();
+                                });
+                                el.wrap(form);
+                            }
+                            el.trigger('click');
+                        }
                     }
                 }
             });
@@ -138,63 +179,103 @@
             }
 
             function upload(files){
-                if(files){
-                    options.files = files;
-                    if(options.removeComplete){
-                        var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
-                        $removeEls.each(function(index, el) {
-                            el.remove();
-                        });
+                if(options.preview){
+                    if(!checkFileType(files[0])){
+                        if(typeof options.error == "function"){
+                            options.error($me, "fileNotAllowed", "File is not allowerd to upload! You can only upload the following files ("+options.allowedFileTypes+")");
+                        }else
+                            alert("File is not allowerd to upload! You can only upload the following files ("+options.allowedFileTypes+")");
+                        return;
                     }
-                    var i, formData, xhr;
-                    if(options.uploadMode == 'all'){
-                        timerStartDate[0] = $.now();
-
-                        formData = new FormData();
-                        xhr = new XMLHttpRequest();
-
-                        for (i = 0; i < files.length; i++) {
-                            formData.append(options.filesName + '[]', files[i]);
+                    if(!checkFileSize(files[0])) {
+                        if(typeof options.error == "function"){
+                            options.error($me, "fileToBig", 'File to big ('+formatBytes(files[0].size)+')! Max file size is ('+options.maxFileSize+')');
+                        }else
+                            alert('File to big ('+formatBytes(files[0].size)+')! Max file size is ('+options.maxFileSize+')');
+                        return;
+                    }
+                    var reader = new FileReader();
+                    var clone = $me.clone();
+                    $me.css({
+                        'z-index': 200,
+                        position: 'absolute'
+                    }).html('').parent().css('position', 'relative');
+                    clone.appendTo($me.parent());
+                    clone.replaceWith('<img id="previewImg" />');
+                    $("#previewImg").css({
+                        width: options.width,
+                        height: options.height,
+                        border: options.border,
+                        background: options.background,
+                        color: options.textColor,
+                        'text-align': options.textAlign,
+                        'box-align': 'center',
+                        'box-pack': 'center'
+                    });
+                    reader.onload = function(e){
+                        if(typeof options.previewDone == "function") options.previewDone($me);
+                        $("#previewImg").attr('src', e.target.result);
+                    };
+                    reader.readAsDataURL(files[0]);
+                }else{
+                    if(files){
+                        options.files = files;
+                        if(options.removeComplete){
+                            var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                            $removeEls.each(function(index, el) {
+                                el.remove();
+                            });
                         }
-                        addProgressBar(0);
-                        bindXHR(xhr, 0);
-
-
-                        xhr.open('post', options.url);
-                        xhr.setRequestHeader('Cache-Control', 'no-cache');
-                        xhr.send(formData);
-                        $(".progress").show();
-                    }else if(options.uploadMode == 'single'){
-                        for (i = 0; i < files.length; i++) {
-                            timerStartDate[uploadIndex] = $.now();
+                        var i, formData, xhr;
+                        if(options.uploadMode == 'all'){
+                            timerStartDate[0] = $.now();
 
                             formData = new FormData();
                             xhr = new XMLHttpRequest();
 
-                            if(!checkFileType(files[i])){
-                                addWrongFileField(i, uploadIndex);
-                                uploadIndex++;
-                                continue;
+                            for (i = 0; i < files.length; i++) {
+                                formData.append(options.filesName + '[]', files[i]);
                             }
-                            if(!checkFileSize(files[i])) {
-                                addFileToBigField(i, uploadIndex);
-                                uploadIndex++;
-                                continue;
-                            }
-                            formData.append(options.filesName + '[]', files[i]);
+                            addProgressBar(0);
+                            bindXHR(xhr, 0);
 
-                            addProgressBar(i, uploadIndex);
-                            bindXHR(xhr, i, uploadIndex);
 
                             xhr.open('post', options.url);
                             xhr.setRequestHeader('Cache-Control', 'no-cache');
                             xhr.send(formData);
                             $(".progress").show();
-                            uploadIndex++;
+                        }else if(options.uploadMode == 'single'){
+                            for (i = 0; i < files.length; i++) {
+                                timerStartDate[uploadIndex] = $.now();
+
+                                formData = new FormData();
+                                xhr = new XMLHttpRequest();
+
+                                if(!checkFileType(files[i])){
+                                    addWrongFileField(i, uploadIndex);
+                                    uploadIndex++;
+                                    continue;
+                                }
+                                if(!checkFileSize(files[i])) {
+                                    addFileToBigField(i, uploadIndex);
+                                    uploadIndex++;
+                                    continue;
+                                }
+                                formData.append(options.filesName + '[]', files[i]);
+
+                                addProgressBar(i, uploadIndex);
+                                bindXHR(xhr, i, uploadIndex);
+
+                                xhr.open('post', options.url);
+                                xhr.setRequestHeader('Cache-Control', 'no-cache');
+                                xhr.send(formData);
+                                $(".progress").show();
+                                uploadIndex++;
+                            }
                         }
                     }
+                    showTooltip();
                 }
-                showTooltip();
             }
         }
 
@@ -316,7 +397,7 @@
         }
 
         function showTooltip(){
-             $("span").tooltip({
+            $("span").tooltip({
                 open: function(event, ui){
                     ui.tooltip.css("max-width", '100%');
                 }
@@ -326,11 +407,15 @@
         function checkFileType(file){
             if (!file.type && file.size%4096 === 0) return false;
             if(options.allowedFileTypes == '*') return true;
-            var extension = file.name.substr(file.name.lastIndexOf('.') + 1);
+            var extension = file.name.substr(file.name.lastIndexOf('.') + 1).toLowerCase();
 
             var allowedTypes = options.allowedFileTypes.replace(' ', '').split(",");
+            var allowedTypesLower = [];
+            for (var i = allowedTypes.length - 1; i >= 0; i--) {
+                allowedTypesLower.push(allowedTypes[i].toLowerCase());
+            }
 
-            if($.inArray(extension, allowedTypes) != -1) return true;
+            if($.inArray(extension, allowedTypesLower) != -1) return true;
 
             return false;
         }
@@ -347,13 +432,15 @@
                 var fileSize = formatBytes(file.size);
                 var fileSizeType = fileSize.match(/[a-zA-Z]+/g)[0];
                 var fileSizeValue = fileSize.match(/\d+/)[0];
+                var fileSizeIndex;
 
                 if(sizeType == fileSizeType){
-                    if(parseInt(fileSizeValue) < parseInt(sizeValue)){
+                    fileSizeIndex = $.inArray(fileSizeType, sizes);
+                    if(parseInt(fileSizeValue) * (Math.pow(1024, fileSizeIndex)) > file.size){
                         return true;
                     }
                 }else{
-                    var fileSizeIndex = $.inArray(fileSizeType, sizes);
+                    fileSizeIndex = $.inArray(fileSizeType, sizes);
                     if(fileSizeIndex > -1){
                         if((parseInt(fileSizeValue) * (Math.pow(1024, fileSizeIndex))) < (parseInt(sizeValue) * (Math.pow(1024, sizeIndex)))){
                             return true;
