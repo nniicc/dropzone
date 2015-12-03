@@ -105,8 +105,11 @@
 
             if(options.clickToUpload){
                 $("." + options.dropzoneWraper).append('<form></form>');
+                var onlyOne = options.preview;
+                var multile = "";
+                if(!onlyOne) multile = "multiple";
                 $("."+options.dropzoneWraper).find('form')
-                .append('<input type="file" name="'+options.filesName+'" multiple/>').hide().
+                .append('<input type="file" name="'+options.filesName+'" ' + multile + '/>').hide().
                 bind('change', function(event) {
                     $(this).trigger('submit');
                 }).on('submit', function(event){
