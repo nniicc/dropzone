@@ -25,7 +25,7 @@
             maxFileSize:            '10MB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
-            showTimer:              true,                           //show time that has elapsed from the start of the upload,
+            showTimer:              false,                           //show time that has elapsed from the start of the upload,
             removeComplete:         true,                           //delete complete progress bars when adding new files
             preview:                false,                          //if enabled it will load the pictured directly to the html
 
@@ -81,7 +81,7 @@
                 options.progressContainer = "."+options.dropzoneWraper;
             }
 
-            if($me.attr('src') !== ''){
+            if(typeof $me.attr('src') !== 'undefined'){
                 var src = $me.attr('src');
                 $me.attr('src', '');
                 var clone = $me.clone();
@@ -106,7 +106,7 @@
             if(options.clickToUpload){
                 $("." + options.dropzoneWraper).append('<form></form>');
                 $("."+options.dropzoneWraper).find('form')
-                .append('<input type="file" name="'+options.filesName+'"/>').hide().
+                .append('<input type="file" name="'+options.filesName+'" multiple/>').hide().
                 bind('change', function(event) {
                     $(this).trigger('submit');
                 }).on('submit', function(event){
@@ -136,17 +136,42 @@
                 drop: function(e){
                     e.preventDefault();
                     dragLeave($me);
-                    if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
-                    else
+                    if(!options.preview){
+                        if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
+                        else
+                            upload(e.originalEvent.dataTransfer.files);
+                    }else{
                         upload(e.originalEvent.dataTransfer.files);
+                    }
                 },
                 click: function(e){
                     if(options.clickToUpload){
-                        if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
-                        else{
-                            var el = $("." + options.dropzoneWraper).find('input');
+                        var el;
+                        var form;
+                        if(!options.preview){
+                            if(options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
+                            else{
+                                el = $("." + options.dropzoneWraper).find('input');
+                                if(el.parent().prop('tagName') !== 'FORM'){
+                                    form = $("<form></form>");
+                                    form.bind('change', function(){
+                                        $(this).trigger('submit');
+                                    }).on('submit', function(event){
+                                        event.preventDefault();
+                                        upload(event.target[0].files);
+                                        var input = $(this).find('input');
+
+                                        //input.wrap('<form>').closest('form').get(0).reset();
+                                        input.unwrap().hide();
+                                    });
+                                    el.wrap(form);
+                                }
+                                el.trigger('click');
+                            }
+                        }else{
+                            el = $("." + options.dropzoneWraper).find('input');
                             if(el.parent().prop('tagName') !== 'FORM'){
-                                var form = $("<form></form>");
+                                form = $("<form></form>");
                                 form.bind('change', function(){
                                     $(this).trigger('submit');
                                 }).on('submit', function(event){
@@ -195,11 +220,11 @@
                         return;
                     }
                     var reader = new FileReader();
-                    var clone = $me.clone();
                     $me.css({
                         'z-index': 200,
                         position: 'absolute'
                     }).html('').parent().css('position', 'relative');
+                    var clone = $me.clone();
                     clone.appendTo($me.parent());
                     clone.replaceWith('<img id="previewImg" />');
                     $("#previewImg").css({
@@ -213,8 +238,8 @@
                         'box-pack': 'center'
                     });
                     reader.onload = function(e){
+                        $("#previewImg").attr('src', e.target.result).show();
                         if(typeof options.previewDone == "function") options.previewDone($me);
-                        $("#previewImg").attr('src', e.target.result);
                     };
                     reader.readAsDataURL(files[0]);
                 }else{
