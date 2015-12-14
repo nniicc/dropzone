@@ -33,6 +33,7 @@
             load:                   null,                           //callback when the div is loaded
             progress:               null,                           //callback for the files procent
             uploadDone:             null,                           //callback for the file upload finished
+            success:                null,                           //callback for a file uploaded
             error:                  null,                           //callback for any error
             previewDone:            null,                           //callback for the preview is rendered
         }, settings);
@@ -354,6 +355,7 @@
                     if(this.readyState == 4 && this.status == 200){
                         changeXhrDoneStatus(index);
                         $(".progress.progress-"+index).children().removeClass('active');
+                        if(typeof options.success  == "function") options.success(this, index);
                     }
                 }
             });
