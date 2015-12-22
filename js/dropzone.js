@@ -57,6 +57,10 @@
             init();
         }
 
+        function updateParams(a){
+            options.params = a;
+        }
+
         function init(){
             $me.css({
                 width: options.width,
@@ -503,7 +507,12 @@
         }
         String.prototype.trunc = String.prototype.trunc || function(n){
               return this.length>n ? this.substr(0,n-1)+'&hellip;' : this;
-          };
+        };
+        $.fn.dropzone = function(options) {
+            if (options === 'updateParams') {
+                return updateParams.apply(this, Array.prototype.splice.call(arguments, 1));
+            }
+        };
 
         return $me;
     };
