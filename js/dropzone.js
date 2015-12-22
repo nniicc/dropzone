@@ -28,6 +28,7 @@
             showTimer:              false,                           //show time that has elapsed from the start of the upload,
             removeComplete:         true,                           //delete complete progress bars when adding new files
             preview:                false,                          //if enabled it will load the pictured directly to the html
+            params:                 {},                             //object of additional params
 
             //functions
             load:                   null,                           //callback when the div is loaded
@@ -265,6 +266,11 @@
                             for (i = 0; i < files.length; i++) {
                                 formData.append(options.filesName + '[]', files[i]);
                             }
+                            if(Object.keys(options.params).length > 0){
+                                for(var key in options.params){
+                                    formData.append(key, options.params[key]);
+                                }
+                            }
                             addProgressBar(0);
                             bindXHR(xhr, 0);
 
@@ -291,6 +297,11 @@
                                     continue;
                                 }
                                 formData.append(options.filesName + '[]', files[i]);
+                                if(Object.keys(options.params).length > 0){
+                                    for(var key in options.params){
+                                        formData.append(key, options.params[key]);
+                                    }
+                                }
 
                                 addProgressBar(i, uploadIndex);
                                 bindXHR(xhr, i, uploadIndex);

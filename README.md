@@ -52,10 +52,14 @@ Callbacks
 - `load` - fires when the div is created, returns this
 - `progress` - fires when the files are being uploaded and returns the prcent and the index of the file
 - `uploadDone` - fires when all files have been uploaded
+- `success` - fires when a single files is uploaded and get the response back, then the index of the progress
+- `error` - fires when there is a error in the upload
+- `previewDone` - fires when the preview imagesis rendered
 
 
 Changes
 ==========
+#### few updates, fixes and added preview support and success callback (2015-12-14)
 #### first version (2015-09-14)
 
 
