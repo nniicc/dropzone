@@ -15,6 +15,8 @@
             <div class="panel-heading">File Upload Form</div>
             <div class="panel-body">
                 <div class="dropzone"></div>
+
+                <div class="dropzone2"></div>
             </div>
         </div>
     </div>
