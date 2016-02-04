@@ -251,71 +251,70 @@
                         if(typeof options.previewDone == "function") options.previewDone($me);
                     };
                     reader.readAsDataURL(files[0]);
-                }else{
-                    if(files){
-                        options.files = files;
-                        if(options.removeComplete){
-                            var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
-                            $removeEls.each(function(index, el) {
-                                el.remove();
-                            });
+                }
+                if(files){
+                    options.files = files;
+                    if(options.removeComplete){
+                        var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                        $removeEls.each(function(index, el) {
+                            el.remove();
+                        });
+                    }
+                    var i, formData, xhr;
+                    if(options.uploadMode == 'all'){
+                        timerStartDate[0] = $.now();
+
+                        formData = new FormData();
+                        xhr = new XMLHttpRequest();
+
+                        for (i = 0; i < files.length; i++) {
+                            formData.append(options.filesName + '[]', files[i]);
                         }
-                        var i, formData, xhr;
-                        if(options.uploadMode == 'all'){
-                            timerStartDate[0] = $.now();
+                        if(Object.keys(options.params).length > 0){
+                            for(var key in options.params){
+                                formData.append(key, options.params[key]);
+                            }
+                        }
+                        addProgressBar(0);
+                        bindXHR(xhr, 0);
+
+
+                        xhr.open('post', options.url);
+                        xhr.setRequestHeader('Cache-Control', 'no-cache');
+                        xhr.send(formData);
+                        $(".progress").show();
+                    }else if(options.uploadMode == 'single'){
+                        for (i = 0; i < files.length; i++) {
+                            timerStartDate[uploadIndex] = $.now();
 
                             formData = new FormData();
                             xhr = new XMLHttpRequest();
 
-                            for (i = 0; i < files.length; i++) {
-                                formData.append(options.filesName + '[]', files[i]);
+                            if(!checkFileType(files[i])){
+                                addWrongFileField(i, uploadIndex);
+                                uploadIndex++;
+                                continue;
                             }
+                            if(!checkFileSize(files[i])) {
+                                addFileToBigField(i, uploadIndex);
+                                uploadIndex++;
+                                continue;
+                            }
+                            formData.append(options.filesName + '[]', files[i]);
                             if(Object.keys(options.params).length > 0){
                                 for(var key in options.params){
                                     formData.append(key, options.params[key]);
                                 }
                             }
-                            addProgressBar(0);
-                            bindXHR(xhr, 0);
 
+                            addProgressBar(i, uploadIndex);
+                            bindXHR(xhr, i, uploadIndex);
 
                             xhr.open('post', options.url);
                             xhr.setRequestHeader('Cache-Control', 'no-cache');
                             xhr.send(formData);
                             $(".progress").show();
-                        }else if(options.uploadMode == 'single'){
-                            for (i = 0; i < files.length; i++) {
-                                timerStartDate[uploadIndex] = $.now();
-
-                                formData = new FormData();
-                                xhr = new XMLHttpRequest();
-
-                                if(!checkFileType(files[i])){
-                                    addWrongFileField(i, uploadIndex);
-                                    uploadIndex++;
-                                    continue;
-                                }
-                                if(!checkFileSize(files[i])) {
-                                    addFileToBigField(i, uploadIndex);
-                                    uploadIndex++;
-                                    continue;
-                                }
-                                formData.append(options.filesName + '[]', files[i]);
-                                if(Object.keys(options.params).length > 0){
-                                    for(var key in options.params){
-                                        formData.append(key, options.params[key]);
-                                    }
-                                }
-
-                                addProgressBar(i, uploadIndex);
-                                bindXHR(xhr, i, uploadIndex);
-
-                                xhr.open('post', options.url);
-                                xhr.setRequestHeader('Cache-Control', 'no-cache');
-                                xhr.send(formData);
-                                $(".progress").show();
-                                uploadIndex++;
-                            }
+                            uploadIndex++;
                         }
                     }
                     showTooltip();
