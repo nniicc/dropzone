@@ -61,7 +61,7 @@
             options.params = a;
         }
 
-        function init(){
+        function init($me){
             $me.css({
                 width: options.width,
                 height: options.height,
@@ -515,7 +515,8 @@
 
         return this.each(function(index, el) {
             $me = this;
-            init();
+
+            init($me);
         });
     };
 
