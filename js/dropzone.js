@@ -513,7 +513,10 @@
             }
         };
 
-        return $me;
+        return this.each(function(index, el) {
+            $me = this;
+            init();
+        });
     };
 
 })(jQuery);
