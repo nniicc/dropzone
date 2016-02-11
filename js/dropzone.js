@@ -1,5 +1,6 @@
 (function ( $, window, document, undefined ) {
-       // undefined is used here as the undefined global
+    "use strict";
+    // undefined is used here as the undefined global
     // variable in ECMAScript 3 and is mutable (i.e. it can
     // be changed by someone else). undefined isn't really
     // being passed in so we can ensure that its value is
@@ -23,6 +24,7 @@
             margin:                 0,                              //margin added if needed
             border:                 '2px dashed #ccc',              //border property
             background:             '',
+            zIndex:                 100,                            //Z index of element
             textColor:              '#ccc',                         //text color
             textAlign:              'center',                       //css style for text-align
             text:                   'Drop files here to upload',    //text inside the div
@@ -38,6 +40,7 @@
             showTimer:              false,                           //show time that has elapsed from the start of the upload,
             removeComplete:         true,                           //delete complete progress bars when adding new files
             preview:                false,                          //if enabled it will load the pictured directly to the html
+            uploadOnPreview:        false,                          //Upload file even if the preview is enabled
             params:                 {},                             //object of additional params
 
             //functions
@@ -86,7 +89,8 @@
             color: this.options.textColor,
             'text-align': this.options.textAlign,
             'box-align': 'center',
-            'box-pack': 'center'
+            'box-pack': 'center',
+            'z-index': this.options.zIndex
         });
 
         $(this.element).hover(function() {
@@ -110,7 +114,7 @@
             $(this.element).attr('src', '');
             var clone = $(this.element).clone();
             $(this.element).css({
-                'z-index': 200,
+                'z-index': this.options.zIndex,
                 position: 'absolute'
             }).html('').parent().css('position', 'relative');
             clone.appendTo($(this.element).parent());
@@ -165,9 +169,7 @@
                 e.preventDefault();
                 dragLeave(this);
                 if(!this.options.preview){
-                    if(this.options.url === '') alert('Upload targer not found!! please set it with \'url\' attribute');
-                    else
-                        upload(this, e.originalEvent.dataTransfer.files);
+                    upload(this, e.originalEvent.dataTransfer.files);
                 }else{
                     upload(this, e.originalEvent.dataTransfer.files);
                 }
@@ -232,7 +234,7 @@
             var reader = new FileReader();
             $(that.element).parent().find('img').remove();
             $(that.element).css({
-                'z-index': 200,
+                'z-index': that.options.zIndex,
                 position: 'absolute'
             }).html('').parent().css('position', 'relative');
             var clone = $(that.element).clone();
@@ -254,70 +256,72 @@
             }.bind(that);
             reader.readAsDataURL(files[0]);
         }
-        var key;
-        if(files){
-            that.options.files = files;
-            if(that.options.removeComplete){
-                var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
-                $removeEls.each(function(index, el) {
-                    el.remove();
-                });
-            }
-            var i, formData, xhr;
-            if(that.options.uploadMode == 'all'){
-                timerStartDate[0] = $.now();
-
-                formData = new FormData();
-                xhr = new XMLHttpRequest();
-
-                for (i = 0; i < files.length; i++) {
-                    formData.append(that.options.filesName + '[]', files[i]);
+        if(!that.options.preview || (that.options.preview && that.options.uploadOnPreview)){
+            var key;
+            if(files){
+                that.options.files = files;
+                if(that.options.removeComplete){
+                    var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                    $removeEls.each(function(index, el) {
+                        el.remove();
+                    });
                 }
-                if(Object.keys(that.options.params).length > 0){
-                    for(key in that.options.params){
-                        formData.append(key, that.options.params[key]);
-                    }
-                }
-                addProgressBar(that, 0);
-                bindXHR(that, xhr, 0);
-
-
-                xhr.open('post', that.options.url);
-                xhr.setRequestHeader('Cache-Control', 'no-cache');
-                xhr.send(formData);
-                $(".progress").show();
-            }else if(that.options.uploadMode == 'single'){
-                for (i = 0; i < files.length; i++) {
-                    timerStartDate[uploadIndex] = $.now();
+                var i, formData, xhr;
+                if(that.options.uploadMode == 'all'){
+                    timerStartDate[0] = $.now();
 
                     formData = new FormData();
                     xhr = new XMLHttpRequest();
 
-                    if(!checkFileType(that, files[i])){
-                        addWrongFileField(that, i, uploadIndex);
-                        uploadIndex++;
-                        continue;
+                    for (i = 0; i < files.length; i++) {
+                        formData.append(that.options.filesName + '[]', files[i]);
                     }
-                    if(!checkFileSize(that, files[i])) {
-                        addFileToBigField(that, i, uploadIndex);
-                        uploadIndex++;
-                        continue;
-                    }
-                    formData.append(that.options.filesName + '[]', files[i]);
                     if(Object.keys(that.options.params).length > 0){
                         for(key in that.options.params){
                             formData.append(key, that.options.params[key]);
                         }
                     }
+                    addProgressBar(that, 0);
+                    bindXHR(that, xhr, 0);
 
-                    addProgressBar(that, i, uploadIndex);
-                    bindXHR(that, xhr, i, uploadIndex);
 
                     xhr.open('post', that.options.url);
                     xhr.setRequestHeader('Cache-Control', 'no-cache');
                     xhr.send(formData);
                     $(".progress").show();
-                    uploadIndex++;
+                }else if(that.options.uploadMode == 'single'){
+                    for (i = 0; i < files.length; i++) {
+                        timerStartDate[uploadIndex] = $.now();
+
+                        formData = new FormData();
+                        xhr = new XMLHttpRequest();
+
+                        if(!checkFileType(that, files[i])){
+                            addWrongFileField(that, i, uploadIndex);
+                            uploadIndex++;
+                            continue;
+                        }
+                        if(!checkFileSize(that, files[i])) {
+                            addFileToBigField(that, i, uploadIndex);
+                            uploadIndex++;
+                            continue;
+                        }
+                        formData.append(that.options.filesName + '[]', files[i]);
+                        if(Object.keys(that.options.params).length > 0){
+                            for(key in that.options.params){
+                                formData.append(key, that.options.params[key]);
+                            }
+                        }
+
+                        addProgressBar(that, i, uploadIndex);
+                        bindXHR(that, xhr, i, uploadIndex);
+
+                        xhr.open('post', that.options.url);
+                        xhr.setRequestHeader('Cache-Control', 'no-cache');
+                        xhr.send(formData);
+                        $(".progress").show();
+                        uploadIndex++;
+                    }
                 }
             }
         }
@@ -408,7 +412,7 @@
             margin: '20px 0 0 0',
         }).append('<div class="progress-bar progress-bar-info progress-bar-striped active"></div>').hide();
         $(".progress-" + index).wrap('<div class="extra-progress-wrapper"></div>');
-        $(".progress-" + index).parent().append('<span title="'+that.options.files[i].name+'">'+that.options.files[i].name.trunc(20)+'</span>').css("width", that.options.progressBarWidth);
+        //$(".progress-" + index).parent().append('<span title="'+that.options.files[i].name+'">'+that.options.files[i].name.trunc(20)+'</span>').css("width", that.options.progressBarWidth);
         if(that.options.showTimer){
             $(".progress-" + index).parent().append('<span style="float:right" class="upload-timer-'+index+'">0</span>');
         }
@@ -454,11 +458,16 @@
     function checkFileType(that, file){
         if (!file.type && file.size%4096 === 0) return false;
         if(that.options.allowedFileTypes == '*') return true;
+
         var extension = file.name.substr(file.name.lastIndexOf('.') + 1).toLowerCase();
 
         var allowedTypes = that.options.allowedFileTypes.replace(' ', '').split(",");
         var allowedTypesLower = [];
+
         for (var i = allowedTypes.length - 1; i >= 0; i--) {
+            if(allowedTypes[i].indexOf(".") != -1){
+                if(file.type.match(allowedTypes[i]) !== null) return true;
+            }
             allowedTypesLower.push(allowedTypes[i].toLowerCase());
         }
 

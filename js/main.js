@@ -14,7 +14,7 @@
     $(".dropzone2").dropzone({
         url: 'upload.php',
         margin: 20,
-        src: 'uploads/.facebook_-518449904.jpg',
+        allowedFileTypes: 'image.*, pdf',
         params:{
             'action': 'save'
         },
