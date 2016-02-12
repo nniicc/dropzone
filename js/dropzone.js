@@ -41,6 +41,7 @@
             removeComplete:         true,                           //delete complete progress bars when adding new files
             preview:                false,                          //if enabled it will load the pictured directly to the html
             uploadOnPreview:        false,                          //Upload file even if the preview is enabled
+            uploadOnDrop:           true,                           //Upload file right after drop
             params:                 {},                             //object of additional params
 
             //functions
@@ -256,71 +257,71 @@
             }.bind(that);
             reader.readAsDataURL(files[0]);
         }
-        if(!that.options.preview || (that.options.preview && that.options.uploadOnPreview)){
-            var key;
-            if(files){
-                that.options.files = files;
-                if(that.options.removeComplete){
-                    var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
-                    $removeEls.each(function(index, el) {
-                        el.remove();
-                    });
+        var key;
+        if(files){
+            that.options.files = files;
+            if(that.options.removeComplete){
+                var $removeEls = $(".progress-bar:not(.active)").parents('.extra-progress-wrapper');
+                $removeEls.each(function(index, el) {
+                    el.remove();
+                });
+            }
+            var i, formData, xhr;
+            if(that.options.uploadMode == 'all'){
+                timerStartDate[0] = $.now();
+
+                formData = new FormData();
+                xhr = new XMLHttpRequest();
+
+                for (i = 0; i < files.length; i++) {
+                    formData.append(that.options.filesName + '[]', files[i]);
                 }
-                var i, formData, xhr;
-                if(that.options.uploadMode == 'all'){
-                    timerStartDate[0] = $.now();
+                if(Object.keys(that.options.params).length > 0){
+                    for(key in that.options.params){
+                        formData.append(key, that.options.params[key]);
+                    }
+                }
+                addProgressBar(that, 0);
+                bindXHR(that, xhr, 0);
+
+
+                xhr.open('post', that.options.url);
+                xhr.setRequestHeader('Cache-Control', 'no-cache');
+                xhr.send(formData);
+                $(".progress").show();
+            }else if(that.options.uploadMode == 'single'){
+                for (i = 0; i < files.length; i++) {
+                    timerStartDate[uploadIndex] = $.now();
 
                     formData = new FormData();
                     xhr = new XMLHttpRequest();
 
-                    for (i = 0; i < files.length; i++) {
-                        formData.append(that.options.filesName + '[]', files[i]);
+                    if(!checkFileType(that, files[i])){
+                        addWrongFileField(that, i, uploadIndex);
+                        uploadIndex++;
+                        continue;
                     }
+                    if(!checkFileSize(that, files[i])) {
+                        addFileToBigField(that, i, uploadIndex);
+                        uploadIndex++;
+                        continue;
+                    }
+                    formData.append(that.options.filesName + '[]', files[i]);
                     if(Object.keys(that.options.params).length > 0){
                         for(key in that.options.params){
                             formData.append(key, that.options.params[key]);
                         }
                     }
-                    addProgressBar(that, 0);
-                    bindXHR(that, xhr, 0);
+                    if((!that.options.preview && that.options.uploadOnDrop) || (that.options.preview && that.options.uploadOnPreview)){
 
+                            addProgressBar(that, i, uploadIndex);
+                            bindXHR(that, xhr, i, uploadIndex);
 
-                    xhr.open('post', that.options.url);
-                    xhr.setRequestHeader('Cache-Control', 'no-cache');
-                    xhr.send(formData);
-                    $(".progress").show();
-                }else if(that.options.uploadMode == 'single'){
-                    for (i = 0; i < files.length; i++) {
-                        timerStartDate[uploadIndex] = $.now();
-
-                        formData = new FormData();
-                        xhr = new XMLHttpRequest();
-
-                        if(!checkFileType(that, files[i])){
-                            addWrongFileField(that, i, uploadIndex);
+                            xhr.open('post', that.options.url);
+                            xhr.setRequestHeader('Cache-Control', 'no-cache');
+                            xhr.send(formData);
+                            $(".progress").show();
                             uploadIndex++;
-                            continue;
-                        }
-                        if(!checkFileSize(that, files[i])) {
-                            addFileToBigField(that, i, uploadIndex);
-                            uploadIndex++;
-                            continue;
-                        }
-                        formData.append(that.options.filesName + '[]', files[i]);
-                        if(Object.keys(that.options.params).length > 0){
-                            for(key in that.options.params){
-                                formData.append(key, that.options.params[key]);
-                            }
-                        }
-
-                        addProgressBar(that, i, uploadIndex);
-                        bindXHR(that, xhr, i, uploadIndex);
-
-                        xhr.open('post', that.options.url);
-                        xhr.setRequestHeader('Cache-Control', 'no-cache');
-                        xhr.send(formData);
-                        $(".progress").show();
-                        uploadIndex++;
                     }
                 }
             }
@@ -359,7 +360,6 @@
                     var percent = e.originalEvent.loaded / e.originalEvent.total * 100;
                     if(typeof that.options.progress == "function") that.options.progress(percent, index);
                     else{
-                        //var fileName = file.name.trunc(15);
                         $(".progress-"+index).children().css("width", percent+"%").html(percent.toFixed(0)+"%");
                     }
                 }
@@ -481,6 +481,7 @@
 
         var sizeType = that.options.maxFileSize.match(/[a-zA-Z]+/g)[0];
         var sizeValue = that.options.maxFileSize.match(/\d+/)[0];
+
         var sizeIndex = $.inArray(sizeType, sizes);
 
 
