@@ -253,6 +253,8 @@
             });
             reader.onload = function(e){
                 $(this.element).parent().find('img').attr('src', e.target.result).show();
+                //Image not showing on preview fix
+                $(this.element).parent().find('img').height('0%').height('100%');
                 if(typeof this.options.previewDone == "function") this.options.previewDone($(this.element));
             }.bind(that);
             reader.readAsDataURL(files[0]);
