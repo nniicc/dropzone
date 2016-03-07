@@ -14,11 +14,11 @@
     $(".dropzone2").dropzone({
         url: 'upload.php',
         margin: 20,
-        allowedFileTypes: 'video.*, pdf',
+        allowedFileTypes: 'image.*, pdf',
         params:{
             'action': 'save'
         },
-        uploadOnDrop: false,
+        uploadOnDrop: true,
         uploadOnPreview: false,
         success: function(res, index){
             console.log(res, index);

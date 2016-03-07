@@ -1,3 +1,4 @@
+
 (function ( $, window, document, undefined ) {
     "use strict";
     // undefined is used here as the undefined global
@@ -18,7 +19,7 @@
         defaults = {
             width:                  300,                            //width of the div
             height:                 300,                            //height of the div
-            progressBarWidth:       300,                            //width of the progress bars
+            progressBarWidth:       '100%',                            //width of the progress bars
             url:                    '',                             //url for the ajax to post
             filesName:              'files',                        //name for the form submit
             margin:                 0,                              //margin added if needed
@@ -34,7 +35,7 @@
 
             dropzoneWraper:         'nniicc-dropzoneParent',        //wrap the dropzone div with custom class
             files:                  [],                             //Access to the files that are droped
-            maxFileSize:            '10MB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
+            maxFileSize:            '5MB',                         //max file size ['bytes', 'KB', 'MB', 'GB', 'TB']
             allowedFileTypes:       '*',                            //allowed files to be uploaded seperated by ',' jpg,png,gif
             clickToUpload:          true,                           //click on dropzone to select files old way
             showTimer:              false,                           //show time that has elapsed from the start of the upload,
@@ -51,6 +52,8 @@
             success:                null,                           //callback for a file uploaded
             error:                  null,                           //callback for any error
             previewDone:            null,                           //callback for the preview is rendered
+            mouseOver:              null,                           //callback for mouseover event
+            mouseOut:               null,                           //callback for mouseout event
         };
 
     // The actual plugin constructor
@@ -199,6 +202,12 @@
                     }
                     el.trigger('click');
                 }
+            }.bind(this),
+            mouseover: function(e){
+                if(typeof this.options.mouseOver == "function") this.options.mouseOver(this);
+            }.bind(this),
+            mouseout: function(e){
+                if(typeof this.options.mouseOut == "function") this.options.mouseOut(this);
             }.bind(this)
         });
 
@@ -227,9 +236,9 @@
             }
             if(!checkFileSize(that, files[0])) {
                 if(typeof that.options.error == "function"){
-                    that.options.error($(that.element), "fileToBig", 'File to big ('+formatBytes(files[0].size)+')! Max file size is ('+that.options.maxFileSize+')');
+                    that.options.error($(that.element), "fileToBig", 'File to big ('+humanFileSize(files[0].size)+')! Max file size is ('+that.options.maxFileSize+')');
                 }else
-                    alert('File to big ('+formatBytes(files[0].size)+')! Max file size is ('+that.options.maxFileSize+')');
+                    alert('File to big ('+humanFileSize(files[0].size)+')! Max file size is ('+that.options.maxFileSize+')');
                 return;
             }
             var reader = new FileReader();
@@ -429,7 +438,7 @@
         $(".error-progress-"+index).css({
             width: that.options.progressBarWidth,
             margin: '20px 0 0 0'
-        }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big ('+formatBytes(file.size)+')</div>');
+        }).append('<div class="progress-bar progress-bar-danger progress-bar-striped" style="width:100%">File to big ('+humanFileSize(file.size)+')</div>');
         $(".error-progress-" + index).wrap('<div class="extra-progress-wrapper"></div>').css("width", that.options.progressBarWidth);
         $(".error-progress-" + index).parent().append('<span title="'+that.options.files[i].name+'">'+fileName+'</span>');
     }
@@ -477,47 +486,94 @@
 
         return false;
     }
+    var validAmount  = function(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+    };
+
+    var parsableUnit = function(u) {
+        return u.match(/\D*/).pop() === u;
+    };
+
+    var incrementBases = {
+      2: [
+        [["B", "Bytes"], 1],
+        [["Kb"], 128],
+        [["k", "K", "kb", "KB", "KiB", "Ki", "ki"], 1024],
+        [["Mb"], 131072],
+        [["m", "M", "mb", "MB", "MiB", "Mi", "mi"], Math.pow(1024, 2)],
+        [["Gb"], 1.342e+8],
+        [["g", "G", "gb", "GB", "GiB", "Gi", "gi"], Math.pow(1024, 3)],
+        [["Tb"], 1.374e+11],
+        [["t", "T", "tb", "TB", "TiB", "Ti", "ti"], Math.pow(1024, 4)],
+        [["Pb"], 1.407e+14],
+        [["p", "P", "pb", "PB", "PiB", "Pi", "pi"], Math.pow(1024, 5)],
+        [["Eb"], 1.441e+17],
+        [["e", "E", "eb", "EB", "EiB", "Ei", "ei"], Math.pow(1024, 6)]
+      ],
+      10: [
+        [["B", "Bytes"], 1],
+        [["Kb"], 125],
+        [["k", "K", "kb", "KB", "KiB", "Ki", "ki"], 1000],
+        [["Mb"], 125000],
+        [["m", "M", "mb", "MB", "MiB", "Mi", "mi"], 1.0e+6],
+        [["Gb"], 1.25e+8],
+        [["g", "G", "gb", "GB", "GiB", "Gi", "gi"], 1.0e+9],
+        [["Tb"], 1.25e+11],
+        [["t", "T", "tb", "TB", "TiB", "Ti", "ti"], 1.0e+12],
+        [["Pb"], 1.25e+14],
+        [["p", "P", "pb", "PB", "PiB", "Pi", "pi"], 1.0e+15],
+        [["Eb"], 1.25e+17],
+        [["e", "E", "eb", "EB", "EiB", "Ei", "ei"], 1.0e+18]
+      ]
+    };
+
+
+    function filesizeParser(input) {
+      var options = arguments[1] || {};
+      var base = parseInt(options.base || 2);
+
+      var parsed = input.toString().match(/^([0-9\.,]*)(?:\s*)?(.*)$/);
+      var amount = parsed[1].replace(',','.');
+      var unit = parsed[2];
+
+      var validUnit = function(sourceUnit) {
+        return sourceUnit === unit;
+      };
+
+      if (!validAmount(amount) || !parsableUnit(unit)) {
+        throw 'Can\'t interpret ' + (input || 'a blank string');
+      }
+      if (unit === '') return amount;
+
+      var increments = incrementBases[base];
+      for (var i = 0; i < increments.length; i++) {
+        var _increment = increments[i];
+
+        if (_increment[0].some(validUnit)) {
+          return amount * _increment[1];
+        }
+      }
+
+      throw unit + ' doesn\'t appear to be a valid unit';
+    }
 
     function checkFileSize(that, file){
-        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
 
-        var sizeType = that.options.maxFileSize.match(/[a-zA-Z]+/g)[0];
-        var sizeValue = that.options.maxFileSize.match(/\d+/)[0];
-
-        var sizeIndex = $.inArray(sizeType, sizes);
-
-
-        if(sizeIndex != -1){
-            var fileSize = formatBytes(file.size);
-            var fileSizeType = fileSize.match(/[a-zA-Z]+/g)[0];
-            var fileSizeValue = fileSize.match(/\d+/)[0];
-            var fileSizeIndex;
-
-            if(sizeType == fileSizeType){
-                fileSizeIndex = $.inArray(fileSizeType, sizes);
-                if(parseInt(fileSizeValue) * (Math.pow(1024, fileSizeIndex)) > file.size){
-                    return true;
-                }
-            }else{
-                fileSizeIndex = $.inArray(fileSizeType, sizes);
-                if(fileSizeIndex > -1){
-                    if((parseInt(fileSizeValue) * (Math.pow(1024, fileSizeIndex))) < (parseInt(sizeValue) * (Math.pow(1024, sizeIndex)))){
-                        return true;
-                    }
-                }
-            }
-        }else{
-            alert("Incorect max file size definition!! ("+sizes.join(',')+")");
-        }
-
-        return false;
-
+        return file.size < filesizeParser(that.options.maxFileSize);
     }
-    function formatBytes(bytes,decimals) {
-       var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-       if (bytes === 0) return '0 Byte';
-       var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-       return Math.round(bytes / Math.pow(1024, i), 2) + sizes[i];
+
+    function humanFileSize(bytes) {
+        var thresh = 1024;
+        if(Math.abs(bytes) < thresh) {
+            return bytes + ' Bytes';
+        }
+        var units = ['KB', 'MB', 'GB', 'TB'];
+        var u = -1;
+        do {
+            bytes /= thresh;
+            ++u;
+        } while(Math.abs(bytes) >= thresh && u < units.length - 1);
+        return bytes.toFixed(1)+' '+units[u];
     }
     String.prototype.trunc = String.prototype.trunc || function(n){
           return this.length>n ? this.substr(0,n-1)+'&hellip;' : this;
