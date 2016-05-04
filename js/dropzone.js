@@ -115,7 +115,7 @@
 
         if(typeof $(this.element).attr('src') !== 'undefined'){
             var src = $(this.element).attr('src');
-            $(this.element).attr('src', '');
+            $(this.element).removeAttr('src');
             var clone = $(this.element).clone();
             $(this.element).css({
                 'z-index': this.options.zIndex,
@@ -124,15 +124,19 @@
             clone.appendTo($(this.element).parent());
             clone.replaceWith('<img class="previewImg" src="'+src+'" />');
 
-            $(this.element).parent().find(".previewImg").css({
-                width: this.options.width,
-                height: this.options.height,
-                border: this.options.border,
-                background: this.options.background,
-                color: this.options.textColor,
-                'text-align': this.options.textAlign,
-                'box-align': 'center',
-                'box-pack': 'center'
+            var $self = this;
+
+            $(this.element).parent().find(".previewImg").load(function(){
+                $(this).css({
+                    width: $self.options.width,
+                    height: $self.options.height,
+                    border: $self.options.border,
+                    background: $self.options.background,
+                    color: $self.options.textColor,
+                    'text-align': $self.options.textAlign,
+                    'box-align': 'center',
+                    'box-pack': 'center'
+                });
             });
         }
 
