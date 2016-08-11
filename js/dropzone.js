@@ -391,7 +391,7 @@
                 if(this.readyState == 4 && this.status == 200){
                     changeXhrDoneStatus(index);
                     $(".progress.progress-"+index).children().removeClass('active');
-                    if(typeof that.options.success  == "function") that.options.success(this, index);
+                    if(typeof that.options.success  == "function") that.options.success(this, index, that);
                 }
             }
         });
