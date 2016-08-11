@@ -11,7 +11,7 @@ Requirements
 
 Demo
 ==========
-  Demo at: http://jsfiddle.net/nniicc/csn8Lpwe/
+  Demo at: http://jsbin.com/wamekuj/4/edit?js,output
 
 
 Basic usage
